@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fuel Tracker Pro v1.3</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Chart.js per i grafici -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 50px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* MODALE PIN LOCK */
+    #pin-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg); z-index: 9999; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; padding: 20px;
+    }
+    .pin-box { background: var(--card); padding: 24px; border-radius: 20px; border: 1px solid var(--border); text-align: center; width: 100%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .pin-box h2 { border: none; margin-bottom: 8px; }
+    .pin-box p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .pin-input { font-size: 1.8rem; letter-spacing: 12px; text-align: center; width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: #0f172a; color: #fff; margin-bottom: 16px; outline: none; }
+    .pin-input:focus { border-color: var(--accent); }
+
+    header { text-align: center; padding: 12px 0 16px; position: relative; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: inline-block; }
+    .version-badge { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
+    .btn-lock { position: absolute; right: 0; top: 12px; background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; }
+    
+    .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); }
+    h2 { font-size: 1.1rem; margin-bottom: 14px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+    input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0f172a; color: #fff; font-size: 1rem; outline: none; }
+    input:focus { border-color: var(--accent); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 8px; text-align: center; display: inline-block; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-primary:active { background: var(--accent-hover); }
+    .btn-secondary { background: #334155; color: #fff; }
+    .btn-success { background: var(--success); color: #0f172a; }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; padding: 6px 10px; width: auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-top: 4px; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); }
+    .history-item { background: #0f172a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .history-info div { margin-bottom: 2px; }
+    .history-date { font-size: 0.8rem; color: var(--text-muted); }
+    .history-main { font-weight: 600; }
+    .history-sub { font-size: 0.8rem; color: var(--accent); }
+    .station-tag { display: inline-block; background: #334155; color: #f8fafc; font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
+    canvas { width: 100% !important; max-height: 220px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab { flex: 1; padding: 10px; text-align: center; background: var(--card); border-radius: 10px; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+    .file-input-wrapper { position: relative; margin-top: 10px; }
+    .file-input-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    footer { margin-top: auto; text-align: center; font-size: 0.75rem; color: var(--text-muted); padding-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- SCHERMATA BLOCCO PIN -->
+  <div id="pin-screen">
+    <div class="pin-box">
+      <h2>Fuel Tracker Pro</h2>
+      <p>Inserisci il PIN a 6 cifre per accedere</p>
+      <input type="password" id="pin-input" class="pin-input" maxlength="6" pattern="\d*" inputmode="numeric" oninput="verifyPIN()">
+      <button class="btn btn-primary" onclick="verifyPIN()">Sblocca</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>Fuel Tracker Pro</h1>
+    <span class="version-badge">v1.3</span>
+    <button class="btn-lock" onclick="lockApp()" title="Blocca App">🔒</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('insert', event)">Inserisci</div>
+    <div class="tab" onclick="switchTab('stats', event)">Grafici</div>
+    <div class="tab" onclick="switchTab('history', event)">Storico & Dati</div>
+  </div>
+
+  <!-- TAB INSERIMENTO -->
+  <div id="tab-insert" class="tab-content">
+    <div class="card">
+      <h2>Nuovo Rifornimento</h2>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="date">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Prezzo/L (€)</label>
+          <input type="number" id="price" step="0.001" placeholder="1.850" oninput="calculate('price')">
+        </div>
+        <div class="form-group">
+          <label>Litri (L)</label>
+          <input type="number" id="liters" step="0.01" placeholder="40.00" oninput="calculate('liters')">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Costo Totale (€)</label>
+        <input type="number" id="total" step="0.01" placeholder="74.00" oninput="calculate('total')">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Km Totali (opzionale)</label>
+          <input type="number" id="km" step="1" placeholder="es. 125000">
+        </div>
+        <div class="form-group">
+          <label>Stazione (opzionale)</label>
+          <input type="text" id="station" placeholder="es. Eni, Q8">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveRecord()">Salva Rifornimento</button>
+    </div>
+  </div>
+
+  <!-- TAB GRAFICI & STATISTICHE -->
+  <div id="tab-stats" class="tab-content" style="display:none;">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Spesa Totale</div>
+        <div class="stat-value" id="stat-total-spend">0 €</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Litri Totali</div>
+        <div class="stat-value" id="stat-total-liters">0 L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Consumo Medio</div>
+        <div class="stat-value" id="stat-avg-consumption">0 km/L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Prezzo Medio</div>
+        <div class="stat-value" id="stat-avg-price">0 €/L</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Andamento Prezzo/L</h2>
+      <canvas id="chartPrice"></canvas>
+    </div>
+    <div class="card">
+      <h2>Efficienza (km/L)</h2>
+      <canvas id="chartEfficiency"></canvas>
+    </div>
+  </div>
+
+  <!-- TAB STORICO & GESTIONE DATI CSV E PIN -->
+  <div id="tab-history" class="tab-content" style="display:none;">
+    <div class="card">
+      <h2>Importa / Esporta (.csv)</h2>
+      <button class="btn btn-secondary" onclick="exportCSV()">Esporta File CSV</button>
+      
+      <div class="file-input-wrapper">
+        <button class="btn btn-success">Importa da File CSV</button>
+        <input type="file" id="csv-file" accept=".csv, .txt" onchange="importCSV(event)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Gestione Sicurezza PIN</h2>
+      <div class="form-group">
+        <label>PIN Attuale</label>
+        <input type="password" id="current-pin" maxlength="6" pattern="\d*" inputmode="numeric" placeholder="6 cifre">
+      </div>
+      <div class="form-group">
+        <label>Nuovo PIN (6 cifre)</label>
+        <input type="password" id="new-pin" maxlength="6" pattern="\d*" inputmode="numeric" placeholder="6 cifre">
+      </div>
+      <button class="btn btn-primary" onclick="changePIN()">Aggiorna PIN</button>
+      <button class="btn btn-secondary" style="margin-top:8px;" onclick="resetPINToDefault()">Ripristina PIN di Default (252525)</button>
+    </div>
+
+    <div class="card">
+      <h2>Storico Rifornimenti</h2>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    Fuel Tracker Pro • Version 1.3
+  </footer>
+
+<script>
+  // Hash SHA-256 precalcolato per il PIN "252525"
+  const DEFAULT_PIN_HASH = "8156db6cbfdbda6f23ef0b31b1ff9ec08a18357a7ccba1d2c6c39f1c305e54eb";
+  let records = JSON.parse(localStorage.getItem('fuel_records') || '[]');
+  let chartP, chartE;
+
+  document.getElementById('date').valueAsDate = new Date();
+
+  function getStoredPINHash() {
+    return localStorage.getItem('fuel_pin_hash') || DEFAULT_PIN_HASH;
+  }
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // VERIFICA PIN CRITTOGRAFATO
+  async function verifyPIN() {
+    let inputVal = document.getElementById('pin-input').value.trim();
+    if (inputVal.length === 6) {
+      let hash = await sha256(inputVal);
+      if (hash === getStoredPINHash()) {
+        document.getElementById('pin-screen').style.display = 'none';
+        document.getElementById('pin-input').value = '';
+      } else {
+        alert("PIN Errato!");
+        document.getElementById('pin-input').value = '';
+      }
+    }
+  }
+
+  function lockApp() {
+    document.getElementById('pin-screen').style.display = 'flex';
+  }
+
+  async function changePIN() {
+    let current = document.getElementById('current-pin').value.trim();
+    let newPin = document.getElementById('new-pin').value.trim();
+
+    if (current.length !== 6 || newPin.length !== 6) {
+      alert("Entrambi i PIN devono essere di 6 cifre numere!");
+      return;
+    }
+
+    let currentHash = await sha256(current);
+    if (currentHash !== getStoredPINHash()) {
+      alert("Il PIN attuale inserito non è corretto!");
+      return;
+    }
+
+    let newHash = await sha256(newPin);
+    localStorage.setItem('fuel_pin_hash', newHash);
+    document.getElementById('current-pin').value = '';
+    document.getElementById('new-pin').value = '';
+    alert("PIN aggiornato con successo!");
+  }
+
+  function resetPINToDefault() {
+    if (confirm("Vuoi davvero ripristinare il PIN predefinito (252525)?")) {
+      localStorage.removeItem('fuel_pin_hash');
+      alert("PIN ripristinato a 252525!");
+    }
+  }
+
+  // Algoritmo di Ordinamento: Per Data, poi per Km rilevati, poi per ID
+  function sortRecords() {
+    records.sort((a, b) => {
+      let dateDiff = new Date(a.date) - new Date(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      
+      let kmA = a.km || 0;
+      let kmB = b.km || 0;
+      if (kmA !== kmB) return kmA - kmB;
+      
+      return (a.id || 0) - (b.id || 0);
+    });
+  }
+
+  function calculate(changedField) {
+    let p = parseFloat(document.getElementById('price').value);
+    let l = parseFloat(document.getElementById('liters').value);
+    let t = parseFloat(document.getElementById('total').value);
+
+    if (changedField === 'total' || changedField === 'price') {
+      if (t && p) document.getElementById('liters').value = (t / p).toFixed(2);
+    } else if (changedField === 'liters') {
+      if (l && p) document.getElementById('total').value = (l * p).toFixed(2);
+      else if (l && t) document.getElementById('price').value = (t / l).toFixed(3);
+    }
+  }
+
+  function saveRecord() {
+    let date = document.getElementById('date').value;
+    let price = parseFloat(document.getElementById('price').value);
+    let liters = parseFloat(document.getElementById('liters').value);
+    let total = parseFloat(document.getElementById('total').value);
+    let km = parseFloat(document.getElementById('km').value) || null;
+    let station = document.getElementById('station').value.trim() || null;
+
+    if (!date || !price || !liters || !total) {
+      alert("Compila tutti i campi obbligatori!");
+      return;
+    }
+
+    records.push({ date, price, liters, total, km, station, id: Date.now() });
+    sortRecords();
+    localStorage.setItem('fuel_records', JSON.stringify(records));
+
+    // Reset Form
+    document.getElementById('price').value = '';
+    document.getElementById('liters').value = '';
+    document.getElementById('total').value = '';
+    document.getElementById('km').value = '';
+    document.getElementById('station').value = '';
+    
+    alert("Salvato con successo!");
+    render();
+  }
+
+  function deleteRecord(id) {
+    if (confirm("Eliminare questo rifornimento?")) {
+      records = records.filter(r => r.id !== id);
+      localStorage.setItem('fuel_records', JSON.stringify(records));
+      render();
+    }
+  }
+
+  function switchTab(tabName, evt) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    if (evt) evt.target.classList.add('active');
+    if (tabName === 'stats') updateCharts();
+  }
+
+  function render() {
+    sortRecords();
+    let list = document.getElementById('history-list');
+    list.innerHTML = '';
+    
+    let totalSpend = 0, totalLiters = 0, totalKmDiff = 0, totalLitersForKm = 0;
+
+    records.slice().reverse().forEach((r, idx) => {
+      totalSpend += r.total;
+      totalLiters += r.liters;
+
+      // Calcolo Efficienza
+      let originalIdx = records.length - 1 - idx;
+      let effText = '';
+      if (originalIdx > 0 && records[originalIdx].km && records[originalIdx - 1].km) {
+        let dist = records[originalIdx].km - records[originalIdx - 1].km;
+        if (dist > 0) {
+          let kmL = (dist / records[originalIdx].liters).toFixed(2);
+          effText = ` | +${dist} km (${kmL} km/L)`;
+          totalKmDiff += dist;
+          totalLitersForKm += records[originalIdx].liters;
+        }
+      }
+
+      let stationBadge = r.station ? `<span class="station-tag">${r.station}</span>` : '';
+
+      list.innerHTML += `
+        <div class="history-item">
+          <div class="history-info">
+            <div class="history-main">${r.total.toFixed(2)} € (${r.liters.toFixed(2)} L) ${stationBadge}</div>
+            <div class="history-sub">${r.price.toFixed(3)} €/L ${r.km ? ' - ' + r.km + ' km' : ''}${effText}</div>
+            <div class="history-date">${r.date}</div>
+          </div>
+          <button class="btn btn-danger" onclick="deleteRecord(${r.id})">X</button>
+        </div>
+      `;
+    });
+
+    document.getElementById('stat-total-spend').innerText = totalSpend.toFixed(2) + ' €';
+    document.getElementById('stat-total-liters').innerText = totalLiters.toFixed(1) + ' L';
+    document.getElementById('stat-avg-price').innerText = records.length ? (totalSpend / totalLiters).toFixed(3) + ' €/L' : '0 €/L';
+    
+    if (totalLitersForKm > 0) {
+      document.getElementById('stat-avg-consumption').innerText = (totalKmDiff / totalLitersForKm).toFixed(2) + ' km/L';
+    } else {
+      document.getElementById('stat-avg-consumption').innerText = '0 km/L';
+    }
+  }
+
+  function updateCharts() {
+    let labels = records.map(r => r.date);
+    let prices = records.map(r => r.price);
+    
+    let efficiencies = records.map((r, i) => {
+      if (i > 0 && r.km && records[i-1].km) {
+        let dist = r.km - records[i-1].km;
+        return dist > 0 ? (dist / r.liters) : null;
+      }
+      return null;
+    });
+
+    if (chartP) chartP.destroy();
+    if (chartE) chartE.destroy();
+
+    chartP = new Chart(document.getElementById('chartPrice'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Prezzo/L (€)', data: prices, borderColor: '#38bdf8', tension: 0.3 }] },
+      options: { scales: { y: { grid: { color: '#334155' } } } }
+    });
+
+    chartE = new Chart(document.getElementById('chartEfficiency'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'km / Litro', data: efficiencies, borderColor: '#10b981', tension: 0.3 }] },
+      options: { scales: { y: { grid: { color: '#334155' } } } }
+    });
+  }
+
+  // ESPORTAZIONE CSV
+  function exportCSV() {
+    if (records.length === 0) {
+      alert("Nessun dato da esportare!");
+      return;
+    }
+
+    let csv = "Data,Prezzo_Litro,Litri,Totale_Euro,Km_Totali,Stazione\n";
+    records.forEach(r => {
+      csv += `${r.date},${r.price},${r.liters},${r.total},${r.km || ''},"${r.station || ''}"\n`;
+    });
+
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `rifornimenti_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  // IMPORTAZIONE CSV
+  function importCSV(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        let text = e.target.result;
+        let lines = text.split('\n');
+        let importedCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          let line = lines[i].trim();
+          if (!line) continue;
+          
+          let parts = line.split(',');
+          if (parts.length >= 4) {
+            let date = parts[0].trim();
+            let price = parseFloat(parts[1]);
+            let liters = parseFloat(parts[2]);
+            let total = parseFloat(parts[3]);
+            let km = parts[4] ? parseFloat(parts[4]) : null;
+            let station = parts[5] ? parts[5].replace(/"/g, '').trim() : null;
+
+            if (date && !isNaN(price) && !isNaN(liters) && !isNaN(total)) {
+              records.push({
+                date,
+                price,
+                liters,
+                total,
+                km: isNaN(km) ? null : km,
+                station: station || null,
+                id: Date.now() + Math.random()
+              });
+              importedCount++;
+            }
+          }
+        }
+
+        sortRecords();
+        localStorage.setItem('fuel_records', JSON.stringify(records));
+        render();
+        alert(`Importati con successo ${importedCount} rifornimenti dal CSV!`);
+      } catch (err) {
+        alert("Errore nell'importazione del file CSV.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  render();
+</script>
+</body>
+</html>
