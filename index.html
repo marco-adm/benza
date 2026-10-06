@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fuel Tracker Pro v1.6</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Chart.js per i grafici -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 50px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* MODALE PIN LOCK */
+    #pin-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg); z-index: 9999; display: none; flex-direction: column;
+      justify-content: center; align-items: center; padding: 20px;
+    }
+    .pin-box { background: var(--card); padding: 24px; border-radius: 20px; border: 1px solid var(--border); text-align: center; width: 100%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .pin-box h2 { border: none; margin-bottom: 8px; }
+    .pin-box p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .pin-input { font-size: 1.8rem; letter-spacing: 12px; text-align: center; width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: #0f172a; color: #fff; margin-bottom: 16px; outline: none; }
+    .pin-input:focus { border-color: var(--accent); }
+
+    header { text-align: center; padding: 12px 0 16px; position: relative; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: inline-block; }
+    .version-badge { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
+    .btn-lock { position: absolute; right: 0; top: 12px; background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; }
+    
+    .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); }
+    h2 { font-size: 1.1rem; margin-bottom: 14px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+    input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0f172a; color: #fff; font-size: 1rem; outline: none; }
+    input:focus { border-color: var(--accent); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 8px; text-align: center; display: inline-block; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-primary:active { background: var(--accent-hover); }
+    .btn-secondary { background: #334155; color: #fff; }
+    .btn-success { background: var(--success); color: #0f172a; }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; padding: 6px 10px; width: auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-top: 4px; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); }
+    .history-item { background: #0f172a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .history-info div { margin-bottom: 2px; }
+    .history-date { font-size: 0.8rem; color: var(--text-muted); }
+    .history-main { font-weight: 600; }
+    .history-sub { font-size: 0.8rem; color: var(--accent); }
+    .station-tag { display: inline-block; background: #334155; color: #f8fafc; font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
+    canvas { width: 100% !important; max-height: 220px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .tab { flex: 1; padding: 10px 4px; text-align: center; background: var(--card); border-radius: 10px; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+    .file-input-wrapper { position: relative; margin-top: 10px; }
+    .file-input-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .pin-status-box { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.85rem; margin-bottom: 12px; }
+    footer { margin-top: auto; text-align: center; font-size: 0.75rem; color: var(--text-muted); padding-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- SCHERMATA BLOCCO PIN -->
+  <div id="pin-screen">
+    <div class="pin-box">
+      <h2>Fuel Tracker Pro</h2>
+      <p>Inserisci il tuo PIN di 6 cifre</p>
+      <input type="password" id="pin-input" class="pin-input" maxlength="6" pattern="\d*" inputmode="numeric" oninput="verifyPIN()">
+      <button class="btn btn-primary" onclick="verifyPIN()">Sblocca</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>Fuel Tracker Pro</h1>
+    <span class="version-badge">v1.6</span>
+    <button class="btn-lock" onclick="lockApp()" title="Blocca App">🔒</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('insert', event)">Inserisci</div>
+    <div class="tab" onclick="switchTab('trip', event)">Viaggio</div>
+    <div class="tab" onclick="switchTab('stats', event)">Grafici & Medie</div>
+    <div class="tab" onclick="switchTab('history', event)">Storico & Dati</div>
+  </div>
+
+  <!-- TAB INSERIMENTO -->
+  <div id="tab-insert" class="tab-content">
+    <div class="card">
+      <h2>Nuovo Rifornimento</h2>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="date">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Prezzo/L (€)</label>
+          <input type="number" id="price" step="0.001" placeholder="1.850" oninput="calculate('price')">
+        </div>
+        <div class="form-group">
+          <label>Litri (L)</label>
+          <input type="number" id="liters" step="0.01" placeholder="40.00" oninput="calculate('liters')">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Costo Totale (€)</label>
+        <input type="number" id="total" step="0.01" placeholder="74.00" oninput="calculate('total')">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Km Totali (opzionale)</label>
+          <input type="number" id="km" step="1" placeholder="es. 125000">
+        </div>
+        <div class="form-group">
+          <label>Stazione (opzionale)</label>
+          <input type="text" id="station" placeholder="es. Eni, Q8">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveRecord()">Salva Rifornimento</button>
+    </div>
+  </div>
+
+  <!-- TAB CALCOLATORE VIAGGIO -->
+  <div id="tab-trip" class="tab-content" style="display:none;">
+    <div class="card">
+      <h2>Calcolatore Costo Viaggio</h2>
+      <div class="form-group">
+        <label>Distanza da Percorrere (km)</label>
+        <input type="number" id="trip-distance" placeholder="es. 450" oninput="calculateTripCost()">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Prezzo Carburante (€/L)</label>
+          <input type="number" id="trip-price" step="0.001" placeholder="1.850" oninput="calculateTripCost()">
+        </div>
+        <div class="form-group">
+          <label>Consumo Medio (km/L)</label>
+          <input type="number" id="trip-efficiency" step="0.1" placeholder="16.5" oninput="calculateTripCost()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Numero Passeggeri (per dividere la spesa)</label>
+        <input type="number" id="trip-passengers" value="1" min="1" oninput="calculateTripCost()">
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Costo Stimato</div>
+        <div class="stat-value" id="trip-total-cost">0.00 €</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Litri Necessari</div>
+        <div class="stat-value" id="trip-liters-needed">0.0 L</div>
+      </div>
+      <div class="stat-card" style="grid-column: span 2;">
+        <div class="stat-label">Costo a Persona</div>
+        <div class="stat-value" id="trip-cost-per-person" style="font-size: 1.5rem; color: var(--success);">0.00 €</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB GRAFICI & MEDIE -->
+  <div id="tab-stats" class="tab-content" style="display:none;">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Spesa Totale</div>
+        <div class="stat-value" id="stat-total-spend">0 €</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Litri Totali</div>
+        <div class="stat-value" id="stat-total-liters">0 L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Consumo Medio</div>
+        <div class="stat-value" id="stat-avg-consumption">0 km/L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Prezzo Medio</div>
+        <div class="stat-value" id="stat-avg-price">0 €/L</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Medie Mensili (Ultimi 12 Mesi)</h2>
+      <div class="stats-grid" style="margin-bottom:0;">
+        <div class="stat-card">
+          <div class="stat-label">Spesa Mensile</div>
+          <div class="stat-value" id="stat-monthly-spend" style="color: var(--warning);">0 €/m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Percorrenza</div>
+          <div class="stat-value" id="stat-monthly-km" style="color: var(--accent);">0 km/m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Litri Mensili</div>
+          <div class="stat-value" id="stat-monthly-liters">0 L/m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Frequenza</div>
+          <div class="stat-value" id="stat-refuel-freq" style="color: var(--success);">0 gg</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Spesa Mensile (€)</h2>
+      <canvas id="chartMonthlySpend"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Andamento Prezzo/L</h2>
+      <canvas id="chartPrice"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Efficienza (km/L)</h2>
+      <canvas id="chartEfficiency"></canvas>
+    </div>
+  </div>
+
+  <!-- TAB STORICO & GESTIONE DATI CSV E PIN -->
+  <div id="tab-history" class="tab-content" style="display:none;">
+    <div class="card">
+      <h2>Importa / Esporta (.csv)</h2>
+      <button class="btn btn-secondary" onclick="exportCSV()">Esporta File CSV</button>
+      
+      <div class="file-input-wrapper">
+        <button class="btn btn-success">Importa da File CSV</button>
+        <input type="file" id="csv-file" accept=".csv, .txt" onchange="importCSV(event)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sicurezza PIN</h2>
+      <div id="pin-status-info" class="pin-status-box">
+        Stato PIN: <strong id="pin-status-text" style="color: var(--text-muted);">Non impostato</strong>
+      </div>
+      
+      <div class="form-group">
+        <label>Nuovo PIN (6 cifre numeriche)</label>
+        <input type="password" id="new-pin-input" maxlength="6" pattern="\d*" inputmode="numeric" placeholder="Inserisci 6 cifre">
+      </div>
+      <button class="btn btn-primary" onclick="setNewPIN()">Imposta / Aggiorna PIN</button>
+      <button class="btn btn-secondary" style="margin-top:8px; display:none;" id="btn-remove-pin" onclick="removePIN()">Rimuovi PIN</button>
+    </div>
+
+    <div class="card">
+      <h2>Storico Rifornimenti</h2>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    Fuel Tracker Pro • Version 1.6
+  </footer>
+
+<script>
+  let records = JSON.parse(localStorage.getItem('fuel_records') || '[]');
+  let chartP, chartE, chartM;
+
+  document.getElementById('date').valueAsDate = new Date();
+
+  function getStoredPIN() {
+    return localStorage.getItem('fuel_user_pin') || null;
+  }
+
+  function checkInitialLock() {
+    let pin = getStoredPIN();
+    if (pin) {
+      document.getElementById('pin-screen').style.display = 'flex';
+    } else {
+      document.getElementById('pin-screen').style.display = 'none';
+    }
+    updatePINUI();
+  }
+
+  function verifyPIN() {
+    let inputVal = document.getElementById('pin-input').value.trim();
+    let storedPIN = getStoredPIN();
+    if (inputVal === storedPIN) {
+      document.getElementById('pin-screen').style.display = 'none';
+      document.getElementById('pin-input').value = '';
+    } else if (inputVal.length === 6) {
+      alert("PIN non corretto!");
+      document.getElementById('pin-input').value = '';
+    }
+  }
+
+  function lockApp() {
+    let pin = getStoredPIN();
+    if (!pin) {
+      alert("Nessun PIN impostato! Puoi impostarne uno nel tab 'Storico & Dati'.");
+      return;
+    }
+    document.getElementById('pin-screen').style.display = 'flex';
+  }
+
+  function setNewPIN() {
+    let newPin = document.getElementById('new-pin-input').value.trim();
+    if (newPin.length !== 6 || isNaN(newPin)) {
+      alert("Inserisci un PIN valido di esattamente 6 cifre numeriche!");
+      return;
+    }
+    localStorage.setItem('fuel_user_pin', newPin);
+    document.getElementById('new-pin-input').value = '';
+    alert("PIN impostato con successo! Verrà richiesto al prossimo riavvio o blocco.");
+    updatePINUI();
+  }
+
+  function removePIN() {
+    if (confirm("Vuoi davvero rimuovere la protezione PIN?")) {
+      localStorage.removeItem('fuel_user_pin');
+      alert("PIN rimosso.");
+      updatePINUI();
+    }
+  }
+
+  function updatePINUI() {
+    let pin = getStoredPIN();
+    let statusText = document.getElementById('pin-status-text');
+    let btnRemove = document.getElementById('btn-remove-pin');
+
+    if (pin) {
+      statusText.innerText = "ATTIVO 🔒";
+      statusText.style.color = "var(--success)";
+      btnRemove.style.display = "block";
+    } else {
+      statusText.innerText = "Non impostato (Accesso Libero)";
+      statusText.style.color = "var(--text-muted)";
+      btnRemove.style.display = "none";
+    }
+  }
+
+  function sortRecords() {
+    records.sort((a, b) => {
+      let dateDiff = new Date(a.date) - new Date(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      let kmA = a.km || 0;
+      let kmB = b.km || 0;
+      if (kmA !== kmB) return kmA - kmB;
+      return (a.id || 0) - (b.id || 0);
+    });
+  }
+
+  function calculate(changedField) {
+    let p = parseFloat(document.getElementById('price').value);
+    let l = parseFloat(document.getElementById('liters').value);
+    let t = parseFloat(document.getElementById('total').value);
+
+    if (changedField === 'total' || changedField === 'price') {
+      if (t && p) document.getElementById('liters').value = (t / p).toFixed(2);
+    } else if (changedField === 'liters') {
+      if (l && p) document.getElementById('total').value = (l * p).toFixed(2);
+      else if (l && t) document.getElementById('price').value = (t / l).toFixed(3);
+    }
+  }
+
+  function saveRecord() {
+    let date = document.getElementById('date').value;
+    let price = parseFloat(document.getElementById('price').value);
+    let liters = parseFloat(document.getElementById('liters').value);
+    let total = parseFloat(document.getElementById('total').value);
+    let km = parseFloat(document.getElementById('km').value) || null;
+    let station = document.getElementById('station').value.trim() || null;
+
+    if (!date || !price || !liters || !total) {
+      alert("Compila tutti i campi obbligatori!");
+      return;
+    }
+
+    records.push({ date, price, liters, total, km, station, id: Date.now() });
+    sortRecords();
+    localStorage.setItem('fuel_records', JSON.stringify(records));
+
+    document.getElementById('price').value = '';
+    document.getElementById('liters').value = '';
+    document.getElementById('total').value = '';
+    document.getElementById('km').value = '';
+    document.getElementById('station').value = '';
+    
+    alert("Salvato con successo!");
+    render();
+  }
+
+  function deleteRecord(id) {
+    if (confirm("Eliminare questo rifornimento?")) {
+      records = records.filter(r => r.id !== id);
+      localStorage.setItem('fuel_records', JSON.stringify(records));
+      render();
+    }
+  }
+
+  function switchTab(tabName, evt) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    if (evt) evt.target.classList.add('active');
+    if (tabName === 'stats') updateCharts();
+    if (tabName === 'trip') autoFillTripDefaults();
+  }
+
+  function render() {
+    sortRecords();
+    let list = document.getElementById('history-list');
+    list.innerHTML = '';
+    
+    let totalSpend = 0, totalLiters = 0, totalKmDiff = 0, totalLitersForKm = 0;
+
+    records.slice().reverse().forEach((r, idx) => {
+      totalSpend += r.total;
+      totalLiters += r.liters;
+
+      let originalIdx = records.length - 1 - idx;
+      let effText = '';
+      if (originalIdx > 0 && records[originalIdx].km && records[originalIdx - 1].km) {
+        let dist = records[originalIdx].km - records[originalIdx - 1].km;
+        if (dist > 0) {
+          let kmL = (dist / records[originalIdx].liters).toFixed(2);
+          effText = ` | +${dist} km (${kmL} km/L)`;
+          totalKmDiff += dist;
+          totalLitersForKm += records[originalIdx].liters;
+        }
+      }
+
+      let stationBadge = r.station ? `<span class="station-tag">${r.station}</span>` : '';
+
+      list.innerHTML += `
+        <div class="history-item">
+          <div class="history-info">
+            <div class="history-main">${r.total.toFixed(2)} € (${r.liters.toFixed(2)} L) ${stationBadge}</div>
+            <div class="history-sub">${r.price.toFixed(3)} €/L ${r.km ? ' - ' + r.km + ' km' : ''}${effText}</div>
+            <div class="history-date">${r.date}</div>
+          </div>
+          <button class="btn btn-danger" onclick="deleteRecord(${r.id})">X</button>
+        </div>
+      `;
+    });
+
+    document.getElementById('stat-total-spend').innerText = totalSpend.toFixed(2) + ' €';
+    document.getElementById('stat-total-liters').innerText = totalLiters.toFixed(1) + ' L';
+    document.getElementById('stat-avg-price').innerText = records.length ? (totalSpend / totalLiters).toFixed(3) + ' €/L' : '0 €/L';
+    
+    if (totalLitersForKm > 0) {
+      document.getElementById('stat-avg-consumption').innerText = (totalKmDiff / totalLitersForKm).toFixed(2) + ' km/L';
+    } else {
+      document.getElementById('stat-avg-consumption').innerText = '0 km/L';
+    }
+
+    calculateMonthlyAverages();
+  }
+
+  function calculateMonthlyAverages() {
+    if (records.length === 0) {
+      document.getElementById('stat-monthly-spend').innerText = '0 €/m';
+      document.getElementById('stat-monthly-km').innerText = '0 km/m';
+      document.getElementById('stat-monthly-liters').innerText = '0 L/m';
+      document.getElementById('stat-refuel-freq').innerText = '0 gg';
+      return;
+    }
+
+    let now = new Date();
+    let oneYearAgo = new Date();
+    oneYearAgo.setFullYear(now.getFullYear() - 1);
+
+    let recentRecords = records.filter(r => new Date(r.date) >= oneYearAgo);
+    if (recentRecords.length === 0) recentRecords = records;
+
+    let totalSpend = recentRecords.reduce((acc, r) => acc + r.total, 0);
+    let totalLiters = recentRecords.reduce((acc, r) => acc + r.liters, 0);
+
+    // Mesi unici presenti o intervallo temporale
+    let startDate = new Date(recentRecords[0].date);
+    let endDate = new Date(recentRecords[recentRecords.length - 1].date);
+    let diffDays = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
+    let diffMonths = Math.max(1, (diffDays / 30.44));
+
+    let monthlySpend = totalSpend / diffMonths;
+    let monthlyLiters = totalLiters / diffMonths;
+
+    // Percorrenza Media Mensile
+    let kmRecords = recentRecords.filter(r => r.km !== null && r.km !== undefined);
+    let monthlyKm = 0;
+    if (kmRecords.length >= 2) {
+      let totalKm = kmRecords[kmRecords.length - 1].km - kmRecords[0].km;
+      monthlyKm = totalKm / diffMonths;
+    }
+
+    // Frequenza media di rifornimento
+    let freqDays = recentRecords.length > 1 ? (diffDays / (recentRecords.length - 1)) : 0;
+
+    document.getElementById('stat-monthly-spend').innerText = monthlySpend.toFixed(0) + ' €/m';
+    document.getElementById('stat-monthly-km').innerText = monthlyKm > 0 ? monthlyKm.toFixed(0) + ' km/m' : 'N/D';
+    document.getElementById('stat-monthly-liters').innerText = monthlyLiters.toFixed(1) + ' L/m';
+    document.getElementById('stat-refuel-freq').innerText = freqDays > 0 ? freqDays.toFixed(1) + ' gg' : 'N/D';
+  }
+
+  function updateCharts() {
+    let labels = records.map(r => r.date);
+    let prices = records.map(r => r.price);
+    
+    let efficiencies = records.map((r, i) => {
+      if (i > 0 && r.km && records[i-1].km) {
+        let dist = r.km - records[i-1].km;
+        return dist > 0 ? (dist / r.liters) : null;
+      }
+      return null;
+    });
+
+    // Raggruppamento Spesa per Mese (AAA-MM)
+    let monthlyData = {};
+    records.forEach(r => {
+      let monthKey = r.date.substring(0, 7); // AAAA-MM
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + r.total;
+    });
+
+    let monthLabels = Object.keys(monthlyData);
+    let monthSpends = Object.values(monthlyData);
+
+    if (chartP) chartP.destroy();
+    if (chartE) chartE.destroy();
+    if (chartM) chartM.destroy();
+
+    chartM = new Chart(document.getElementById('chartMonthlySpend'), {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [{
+          label: 'Spesa (€)',
+          data: monthSpends,
+          backgroundColor: 'rgba(245, 158, 11, 0.7)',
+          borderColor: '#f59e0b',
+          borderWidth: 1,
+          borderRadius: 6
+        }]
+      },
+      options: { scales: { y: { grid: { color: '#334155' } } } }
+    });
+
+    chartP = new Chart(document.getElementById('chartPrice'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Prezzo/L (€)', data: prices, borderColor: '#38bdf8', tension: 0.3 }] },
+      options: { scales: { y: { grid: { color: '#334155' } } } }
+    });
+
+    chartE = new Chart(document.getElementById('chartEfficiency'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'km / Litro', data: efficiencies, borderColor: '#10b981', tension: 0.3 }] },
+      options: { scales: { y: { grid: { color: '#334155' } } } }
+    });
+  }
+
+  function autoFillTripDefaults() {
+    if (records.length > 0) {
+      let lastPrice = records[records.length - 1].price;
+      if (!document.getElementById('trip-price').value) {
+        document.getElementById('trip-price').value = lastPrice.toFixed(3);
+      }
+
+      let totalKmDiff = 0, totalLiters = 0;
+      for (let i = 1; i < records.length; i++) {
+        if (records[i].km && records[i-1].km) {
+          let dist = records[i].km - records[i-1].km;
+          if (dist > 0) {
+            totalKmDiff += dist;
+            totalLiters += records[i].liters;
+          }
+        }
+      }
+
+      if (totalLiters > 0 && !document.getElementById('trip-efficiency').value) {
+        let avgEff = (totalKmDiff / totalLiters).toFixed(1);
+        document.getElementById('trip-efficiency').value = avgEff;
+      }
+    }
+    calculateTripCost();
+  }
+
+  function calculateTripCost() {
+    let distance = parseFloat(document.getElementById('trip-distance').value) || 0;
+    let price = parseFloat(document.getElementById('trip-price').value) || 0;
+    let efficiency = parseFloat(document.getElementById('trip-efficiency').value) || 0;
+    let passengers = parseInt(document.getElementById('trip-passengers').value) || 1;
+
+    if (distance > 0 && price > 0 && efficiency > 0) {
+      let litersNeeded = distance / efficiency;
+      let totalCost = litersNeeded * price;
+      let costPerPerson = totalCost / Math.max(1, passengers);
+
+      document.getElementById('trip-liters-needed').innerText = litersNeeded.toFixed(1) + ' L';
+      document.getElementById('trip-total-cost').innerText = totalCost.toFixed(2) + ' €';
+      document.getElementById('trip-cost-per-person').innerText = costPerPerson.toFixed(2) + ' €';
+    } else {
+      document.getElementById('trip-liters-needed').innerText = '0.0 L';
+      document.getElementById('trip-total-cost').innerText = '0.00 €';
+      document.getElementById('trip-cost-per-person').innerText = '0.00 €';
+    }
+  }
+
+  function exportCSV() {
+    if (records.length === 0) {
+      alert("Nessun dato da esportare!");
+      return;
+    }
+
+    let csv = "Data,Prezzo_Litro,Litri,Totale_Euro,Km_Totali,Stazione\n";
+    records.forEach(r => {
+      csv += `${r.date},${r.price},${r.liters},${r.total},${r.km || ''},"${r.station || ''}"\n`;
+    });
+
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `rifornimenti_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  function importCSV(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        let text = e.target.result;
+        let lines = text.split('\n');
+        let importedCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          let line = lines[i].trim();
+          if (!line) continue;
+          
+          let parts = line.split(',');
+          if (parts.length >= 4) {
+            let date = parts[0].trim();
+            let price = parseFloat(parts[1]);
+            let liters = parseFloat(parts[2]);
+            let total = parseFloat(parts[3]);
+            let km = parts[4] ? parseFloat(parts[4]) : null;
+            let station = parts[5] ? parts[5].replace(/"/g, '').trim() : null;
+
+            if (date && !isNaN(price) && !isNaN(liters) && !isNaN(total)) {
+              records.push({
+                date,
+                price,
+                liters,
+                total,
+                km: isNaN(km) ? null : km,
+                station: station || null,
+                id: Date.now() + Math.random()
+              });
+              importedCount++;
+            }
+          }
+        }
+
+        sortRecords();
+        localStorage.setItem('fuel_records', JSON.stringify(records));
+        render();
+        alert(`Importati con successo ${importedCount} rifornimenti dal CSV!`);
+      } catch (err) {
+        alert("Errore nell'importazione del file CSV.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  checkInitialLock();
+  render();
+</script>
+</body>
+</html>
