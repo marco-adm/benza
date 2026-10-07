@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fuel Tracker Pro v2.6</title>
+  <title>Fuel Tracker Pro v2.8 (Debug Edition)</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Chart.js per i grafici -->
@@ -24,7 +24,7 @@
       --purple: #a855f7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 50px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 220px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
     
     /* MODALE PIN LOCK */
     #pin-screen {
@@ -79,7 +79,37 @@
     .file-input-wrapper { position: relative; margin-top: 10px; }
     .file-input-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
     .pin-status-box { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.85rem; margin-bottom: 12px; }
-    footer { margin-top: auto; text-align: center; font-size: 0.75rem; color: var(--text-muted); padding-top: 20px; }
+
+    /* DEBUG BANNER FISSO IN BASSO */
+    #debug-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 160px;
+      background: #180808;
+      border-top: 2px solid var(--danger);
+      color: #f87171;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      z-index: 10000;
+      overflow-y: auto;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.8);
+    }
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #450a0a;
+      padding-bottom: 4px;
+    }
+    .debug-title { font-weight: bold; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; }
+    .debug-actions button { background: #450a0a; color: #fca5a5; border: 1px solid var(--danger); border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; cursor: pointer; margin-left: 4px; }
+    .debug-log-entry { margin-bottom: 4px; word-break: break-all; border-bottom: 1px dashed rgba(239, 68, 68, 0.2); padding-bottom: 2px; }
+    .debug-info { color: #38bdf8; }
+    .debug-error { color: #f87171; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -89,24 +119,24 @@
     <div class="pin-box">
       <h2>Fuel Tracker Pro</h2>
       <p>Inserisci il tuo PIN di 6 cifre</p>
-      <input type="password" id="pin-input" class="pin-input" maxlength="6" pattern="\d*" inputmode="numeric" oninput="verifyPIN()">
-      <button class="btn btn-primary" onclick="verifyPIN()">Sblocca</button>
+      <input type="password" id="pin-input" class="pin-input" maxlength="6" pattern="\d*" inputmode="numeric">
+      <button class="btn btn-primary" id="btn-unlock-pin">Sblocca</button>
     </div>
   </div>
 
   <header>
     <h1>Fuel Tracker Pro</h1>
-    <span class="version-badge">v2.6</span>
-    <button class="btn-lock" onclick="lockApp()" title="Blocca App">🔒</button>
+    <span class="version-badge">v2.8 Debug</span>
+    <button class="btn-lock" id="btn-lock-app" title="Blocca App">🔒</button>
   </header>
 
   <!-- NAVIGAZIONE TAB -->
   <div class="tabs">
-    <button class="tab-btn active" id="btn-tab-insert" onclick="switchTab('insert')">Rifornimento</button>
-    <button class="tab-btn tab-ev" id="btn-tab-ev" onclick="switchTab('ev')">Ricarica EV ⚡</button>
-    <button class="tab-btn" id="btn-tab-trip" onclick="switchTab('trip')">Viaggio</button>
-    <button class="tab-btn" id="btn-tab-stats" onclick="switchTab('stats')">Grafici & Medie</button>
-    <button class="tab-btn" id="btn-tab-history" onclick="switchTab('history')">Storico & Dati</button>
+    <button class="tab-btn active" id="btn-tab-insert">Rifornimento</button>
+    <button class="tab-btn tab-ev" id="btn-tab-ev">Ricarica EV ⚡</button>
+    <button class="tab-btn" id="btn-tab-trip">Viaggio</button>
+    <button class="tab-btn" id="btn-tab-stats">Grafici & Medie</button>
+    <button class="tab-btn" id="btn-tab-history">Storico & Dati</button>
   </div>
 
   <!-- TAB INSERIMENTO / MODIFICA RIFORNIMENTO BENZINA -->
@@ -121,16 +151,16 @@
       <div class="grid-2">
         <div class="form-group">
           <label>Prezzo/L (€)</label>
-          <input type="number" id="price" step="0.001" placeholder="1.850" oninput="calculate('price')">
+          <input type="number" id="price" step="0.001" placeholder="1.850">
         </div>
         <div class="form-group">
           <label>Litri (L)</label>
-          <input type="number" id="liters" step="0.01" placeholder="40.00" oninput="calculate('liters')">
+          <input type="number" id="liters" step="0.01" placeholder="40.00">
         </div>
       </div>
       <div class="form-group">
         <label>Costo Totale (€)</label>
-        <input type="number" id="total" step="0.01" placeholder="74.00" oninput="calculate('total')">
+        <input type="number" id="total" step="0.01" placeholder="74.00">
       </div>
       <div class="grid-2">
         <div class="form-group">
@@ -142,8 +172,8 @@
           <input type="text" id="station" placeholder="es. Eni, Q8">
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-save-fuel" onclick="saveRecord()">Salva Rifornimento</button>
-      <button class="btn btn-secondary" id="btn-cancel-fuel-edit" onclick="resetFuelForm()" style="display:none; margin-top:6px;">Annulla Modifica</button>
+      <button class="btn btn-primary" id="btn-save-fuel">Salva Rifornimento</button>
+      <button class="btn btn-secondary" id="btn-cancel-fuel-edit" style="display:none; margin-top:6px;">Annulla Modifica</button>
     </div>
   </div>
 
@@ -159,17 +189,17 @@
       <div class="grid-2">
         <div class="form-group">
           <label>% Batteria Partenza</label>
-          <input type="number" id="ev-start-pct" min="0" max="100" placeholder="es. 20" oninput="calculateEV()">
+          <input type="number" id="ev-start-pct" min="0" max="100" placeholder="es. 20">
         </div>
         <div class="form-group">
           <label>% Batteria Finale</label>
-          <input type="number" id="ev-end-pct" min="0" max="100" placeholder="es. 100" oninput="calculateEV()">
+          <input type="number" id="ev-end-pct" min="0" max="100" placeholder="es. 100">
         </div>
       </div>
       <div class="grid-2">
         <div class="form-group">
           <label>Costo €/kWh</label>
-          <input type="number" id="ev-kwh-price" step="0.001" placeholder="es. 0.250" oninput="calculateEV()">
+          <input type="number" id="ev-kwh-price" step="0.001" placeholder="es. 0.250">
         </div>
         <div class="form-group">
           <label>Km Totali</label>
@@ -194,8 +224,8 @@
         </div>
       </div>
 
-      <button class="btn btn-ev" id="btn-save-ev" onclick="saveEVRecord()">Salva Ricarica EV</button>
-      <button class="btn btn-secondary" id="btn-cancel-ev-edit" onclick="resetEVForm()" style="display:none; margin-top:6px;">Annulla Modifica</button>
+      <button class="btn btn-ev" id="btn-save-ev">Salva Ricarica EV</button>
+      <button class="btn btn-secondary" id="btn-cancel-ev-edit" style="display:none; margin-top:6px;">Annulla Modifica</button>
     </div>
   </div>
 
@@ -205,21 +235,21 @@
       <h2>Calcolatore Costo Viaggio</h2>
       <div class="form-group">
         <label>Distanza da Percorrere (km)</label>
-        <input type="number" id="trip-distance" placeholder="es. 450" oninput="calculateTripCost()">
+        <input type="number" id="trip-distance" placeholder="es. 450">
       </div>
       <div class="grid-2">
         <div class="form-group">
           <label>Prezzo Carburante (€/L)</label>
-          <input type="number" id="trip-price" step="0.001" placeholder="1.850" oninput="calculateTripCost()">
+          <input type="number" id="trip-price" step="0.001" placeholder="1.850">
         </div>
         <div class="form-group">
           <label>Consumo Medio (km/L)</label>
-          <input type="number" id="trip-efficiency" step="0.1" placeholder="16.5" oninput="calculateTripCost()">
+          <input type="number" id="trip-efficiency" step="0.1" placeholder="16.5">
         </div>
       </div>
       <div class="form-group">
         <label>Numero Passeggeri (per dividere la spesa)</label>
-        <input type="number" id="trip-passengers" value="1" min="1" oninput="calculateTripCost()">
+        <input type="number" id="trip-passengers" value="1" min="1">
       </div>
     </div>
 
@@ -263,340 +293,4 @@
       </div>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Spesa Benzina</div>
-        <div class="stat-value" id="stat-total-spend">0 €</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Litri Totali</div>
-        <div class="stat-value" id="stat-total-liters">0 L</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Consumo Benzina</div>
-        <div class="stat-value" id="stat-avg-consumption">0 km/L</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Prezzo Medio Benzina</div>
-        <div class="stat-value" id="stat-avg-price">0 €/L</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Medie Mensili Benzina (Ultimi 12 Mesi)</h2>
-      <div class="stats-grid" style="margin-bottom:0;">
-        <div class="stat-card">
-          <div class="stat-label">Spesa Mensile</div>
-          <div class="stat-value" id="stat-monthly-spend" style="color: var(--warning);">0 €/m</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Percorrenza</div>
-          <div class="stat-value" id="stat-monthly-km" style="color: var(--accent);">0 km/m</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Litri Mensili</div>
-          <div class="stat-value" id="stat-monthly-liters">0 L/m</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Frequenza</div>
-          <div class="stat-value" id="stat-refuel-freq" style="color: var(--success);">0 gg</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Confronto Spesa Mensile (Benzina vs EV)</h2>
-      <canvas id="chartMonthlySpend"></canvas>
-    </div>
-
-    <div class="card">
-      <h2>Andamento Prezzo/L Benzina</h2>
-      <canvas id="chartPrice"></canvas>
-    </div>
-
-    <div class="card">
-      <h2>Efficienza Benzina (km/L)</h2>
-      <canvas id="chartEfficiency"></canvas>
-    </div>
-  </div>
-
-  <!-- TAB STORICO & GESTIONE DATI -->
-  <div id="tab-history" class="tab-content" style="display:none;">
-    <div class="card">
-      <h2>Importa / Esporta (.csv)</h2>
-      <button class="btn btn-secondary" onclick="exportCSV()">Esporta Rifornimenti CSV</button>
-      <button class="btn btn-secondary" style="margin-top:6px;" onclick="exportEVCSV()">Esporta Ricariche EV CSV</button>
-      <div class="file-input-wrapper">
-        <button class="btn btn-success">Importa Rifornimenti CSV</button>
-        <input type="file" id="csv-file" accept=".csv, .txt" onchange="importCSV(event)">
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Sicurezza PIN</h2>
-      <div id="pin-status-info" class="pin-status-box">
-        Stato PIN: <strong id="pin-status-text" style="color: var(--text-muted);">Non impostato</strong>
-      </div>
-      
-      <div class="form-group">
-        <label>Nuovo PIN (6 cifre numeriche)</label>
-        <input type="password" id="new-pin-input" maxlength="6" pattern="\d*" inputmode="numeric" placeholder="Inserisci 6 cifre">
-      </div>
-      <button class="btn btn-primary" onclick="setNewPIN()">Imposta / Aggiorna PIN</button>
-      <button class="btn btn-secondary" style="margin-top:8px; display:none;" id="btn-remove-pin" onclick="removePIN()">Rimuovi PIN</button>
-    </div>
-
-    <div class="card">
-      <h2>Storico Rifornimenti Carburante</h2>
-      <div id="history-list"></div>
-    </div>
-
-    <div class="card">
-      <h2>Storico Ricariche Elettriche (EV)</h2>
-      <div id="ev-history-list"></div>
-    </div>
-  </div>
-
-  <footer>
-    Fuel Tracker Pro • Version 2.6
-  </footer>
-
-<script>
-  // PARAMETRI FISSI FORD EXPLORER 2020 PHEV
-  const EXPLORER_USABLE_BATTERY_KWH = 10.3;
-  const CHARGING_EFFICIENCY_AC = 0.85;
-
-  let records = [];
-  let evRecords = [];
-  let chartP = null, chartE = null, chartM = null;
-
-  document.addEventListener('DOMContentLoaded', () => {
-    try { records = JSON.parse(localStorage.getItem('fuel_records') || '[]'); } catch(e){ records = []; }
-    try { evRecords = JSON.parse(localStorage.getItem('ev_records') || '[]'); } catch(e){ evRecords = []; }
-
-    document.getElementById('date').valueAsDate = new Date();
-    document.getElementById('ev-date').valueAsDate = new Date();
-
-    checkInitialLock();
-    render();
-    populateDefaultsFromLastRecord();
-    populateEVDefaultsFromLastRecord();
-  });
-
-  // SWITCH TAB SICURO
-  function switchTab(tabName) {
-    let contents = document.querySelectorAll('.tab-content');
-    contents.forEach(el => el.style.display = 'none');
-
-    let buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(el => el.classList.remove('active'));
-
-    let targetTab = document.getElementById(`tab-${tabName}`);
-    let targetBtn = document.getElementById(`btn-tab-${tabName}`);
-
-    if (targetTab) targetTab.style.display = 'block';
-    if (targetBtn) targetBtn.classList.add('active');
-
-    if (tabName === 'stats') updateCharts();
-    if (tabName === 'trip') autoFillTripDefaults();
-    if (tabName === 'insert' && !document.getElementById('editing-fuel-id').value) populateDefaultsFromLastRecord();
-    if (tabName === 'ev' && !document.getElementById('editing-ev-id').value) populateEVDefaultsFromLastRecord();
-  }
-
-  function getStoredPIN() {
-    return localStorage.getItem('fuel_user_pin') || null;
-  }
-
-  function checkInitialLock() {
-    let pin = getStoredPIN();
-    let pinScreen = document.getElementById('pin-screen');
-    if (pinScreen) {
-      pinScreen.style.display = pin ? 'flex' : 'none';
-    }
-    updatePINUI();
-  }
-
-  function verifyPIN() {
-    let inputVal = document.getElementById('pin-input').value.trim();
-    let storedPIN = getStoredPIN();
-    if (inputVal === storedPIN) {
-      document.getElementById('pin-screen').style.display = 'none';
-      document.getElementById('pin-input').value = '';
-    } else if (inputVal.length === 6) {
-      alert("PIN non corretto!");
-      document.getElementById('pin-input').value = '';
-    }
-  }
-
-  function lockApp() {
-    let pin = getStoredPIN();
-    if (!pin) {
-      alert("Nessun PIN impostato! Puoi impostarne uno nel tab 'Storico & Dati'.");
-      return;
-    }
-    document.getElementById('pin-screen').style.display = 'flex';
-  }
-
-  function setNewPIN() {
-    let newPin = document.getElementById('new-pin-input').value.trim();
-    if (newPin.length !== 6 || isNaN(newPin)) {
-      alert("Inserisci un PIN valido di esattamente 6 cifre numeriche!");
-      return;
-    }
-    localStorage.setItem('fuel_user_pin', newPin);
-    document.getElementById('new-pin-input').value = '';
-    alert("PIN impostato con successo!");
-    updatePINUI();
-  }
-
-  function removePIN() {
-    if (confirm("Vuoi davvero rimuovere la protezione PIN?")) {
-      localStorage.removeItem('fuel_user_pin');
-      alert("PIN rimosso.");
-      updatePINUI();
-    }
-  }
-
-  function updatePINUI() {
-    let pin = getStoredPIN();
-    let statusText = document.getElementById('pin-status-text');
-    let btnRemove = document.getElementById('btn-remove-pin');
-
-    if (pin && statusText && btnRemove) {
-      statusText.innerText = "ATTIVO 🔒";
-      statusText.style.color = "var(--success)";
-      btnRemove.style.display = "block";
-    } else if (statusText && btnRemove) {
-      statusText.innerText = "Non impostato";
-      statusText.style.color = "var(--text-muted)";
-      btnRemove.style.display = "none";
-    }
-  }
-
-  function sortRecords() {
-    records.sort((a, b) => {
-      let dateDiff = new Date(a.date) - new Date(b.date);
-      if (dateDiff !== 0) return dateDiff;
-      let kmA = (a.km !== null && a.km !== undefined) ? Number(a.km) : -1;
-      let kmB = (b.km !== null && b.km !== undefined) ? Number(b.km) : -1;
-      if (kmA !== kmB) return kmA - kmB;
-      return (a.id || 0) - (b.id || 0);
-    });
-  }
-
-  function sortEVRecords() {
-    evRecords.sort((a, b) => {
-      let dateDiff = new Date(a.date) - new Date(b.date);
-      if (dateDiff !== 0) return dateDiff;
-      let kmA = (a.km !== null && a.km !== undefined) ? Number(a.km) : -1;
-      let kmB = (b.km !== null && b.km !== undefined) ? Number(b.km) : -1;
-      if (kmA !== kmB) return kmA - kmB;
-      return (a.id || 0) - (b.id || 0);
-    });
-  }
-
-  function populateDefaultsFromLastRecord() {
-    if (records.length > 0) {
-      sortRecords();
-      let lastRecord = records[records.length - 1];
-      if (lastRecord.price) document.getElementById('price').value = Number(lastRecord.price).toFixed(3);
-      if (lastRecord.km) document.getElementById('km').value = lastRecord.km;
-    }
-  }
-
-  function populateEVDefaultsFromLastRecord() {
-    if (evRecords.length > 0) {
-      sortEVRecords();
-      let lastEV = evRecords[evRecords.length - 1];
-      if (lastEV.priceKwh) document.getElementById('ev-kwh-price').value = Number(lastEV.priceKwh).toFixed(3);
-      if (lastEV.km) document.getElementById('ev-km').value = lastEV.km;
-    }
-  }
-
-  // CALCOLO AUTOMATICO E BIDIREZIONALE RIFORNIMENTO
-  function calculate(changedField) {
-    let p = parseFloat(document.getElementById('price').value);
-    let l = parseFloat(document.getElementById('liters').value);
-    let t = parseFloat(document.getElementById('total').value);
-
-    if (changedField === 'total' || changedField === 'price') {
-      if (t && p && p > 0) document.getElementById('liters').value = (t / p).toFixed(2);
-    } else if (changedField === 'liters') {
-      if (l && p) document.getElementById('total').value = (l * p).toFixed(2);
-      else if (l && t && l > 0) document.getElementById('price').value = (t / l).toFixed(3);
-    }
-  }
-
-  function calculateEV() {
-    let startPct = parseFloat(document.getElementById('ev-start-pct').value) || 0;
-    let endPct = parseFloat(document.getElementById('ev-end-pct').value) || 0;
-    let priceKwh = parseFloat(document.getElementById('ev-kwh-price').value) || 0;
-
-    let deltaPct = Math.max(0, endPct - startPct);
-    let kwhNet = (deltaPct / 100) * EXPLORER_USABLE_BATTERY_KWH;
-    let kwhDrawn = kwhNet / CHARGING_EFFICIENCY_AC;
-    let totalCost = kwhDrawn * priceKwh;
-
-    document.getElementById('ev-kwh-net').innerText = kwhNet.toFixed(2) + ' kWh';
-    document.getElementById('ev-kwh-drawn').innerText = kwhDrawn.toFixed(2) + ' kWh';
-    document.getElementById('ev-total-cost').innerText = totalCost.toFixed(2) + ' €';
-  }
-
-  // SALVATAGGIO O MODIFICA RIFORNIMENTO BENZINA
-  function saveRecord() {
-    let date = document.getElementById('date').value;
-    let price = parseFloat(document.getElementById('price').value);
-    let liters = parseFloat(document.getElementById('liters').value);
-    let total = parseFloat(document.getElementById('total').value);
-    let kmInput = document.getElementById('km').value;
-    let km = kmInput !== '' ? parseFloat(kmInput) : null;
-    let station = document.getElementById('station').value.trim() || null;
-    let editId = document.getElementById('editing-fuel-id').value;
-
-    if (!date || isNaN(price) || isNaN(liters) || isNaN(total)) {
-      alert("Compila tutti i campi obbligatori: Data, Prezzo/L, Litri e Costo Totale!");
-      return;
-    }
-
-    if (editId) {
-      // Modifica esistente
-      let idx = records.findIndex(r => r.id == editId);
-      if (idx !== -1) {
-        records[idx] = { date, price, liters, total, km, station, id: Number(editId) };
-      }
-    } else {
-      // Nuovo inserimento
-      records.push({ date, price, liters, total, km, station, id: Date.now() });
-    }
-
-    sortRecords();
-    localStorage.setItem('fuel_records', JSON.stringify(records));
-    resetFuelForm();
-    alert("Rifornimento salvato con successo!");
-    render();
-  }
-
-  // EDITA RECORD BENZINA (PUNTO C)
-  function editRecord(id) {
-    let r = records.find(item => item.id == id);
-    if (!r) return;
-
-    document.getElementById('editing-fuel-id').value = r.id;
-    document.getElementById('date').value = r.date;
-    document.getElementById('price').value = r.price;
-    document.getElementById('liters').value = r.liters;
-    document.getElementById('total').value = r.total;
-    document.getElementById('km').value = r.km || '';
-    document.getElementById('station').value = r.station || '';
-
-    document.getElementById('fuel-form-title').innerText = "Modifica Rifornimento";
-    document.getElementById('btn-save-fuel').innerText = "Aggiorna Rifornimento";
-    document.getElementById('btn-cancel-fuel-edit').style.display = "block";
-
-    switchTab('insert');
-  }
-
-  function resetFuelForm() {
-    document.getElementById('editing-fuel-id').value = '';
-    document.getElementById('price').value = '';
-    document.getElementById('liters').value = '';
+    <div class="stats
