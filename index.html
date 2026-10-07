@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fuel Tracker Pro v2.5</title>
+  <title>Fuel Tracker Pro v2.6</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Chart.js per i grafici -->
@@ -56,6 +56,7 @@
     .btn-ev { background: var(--ev-accent); color: #0f172a; }
     .btn-secondary { background: #334155; color: #fff; }
     .btn-success { background: var(--success); color: #0f172a; }
+    .btn-edit { background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid var(--accent); font-size: 0.8rem; padding: 6px 10px; width: auto; margin-right: 4px; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; padding: 6px 10px; width: auto; }
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
     .stat-card { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
@@ -95,7 +96,7 @@
 
   <header>
     <h1>Fuel Tracker Pro</h1>
-    <span class="version-badge">v2.5</span>
+    <span class="version-badge">v2.6</span>
     <button class="btn-lock" onclick="lockApp()" title="Blocca App">🔒</button>
   </header>
 
@@ -108,10 +109,11 @@
     <button class="tab-btn" id="btn-tab-history" onclick="switchTab('history')">Storico & Dati</button>
   </div>
 
-  <!-- TAB INSERIMENTO RIFORNIMENTO -->
+  <!-- TAB INSERIMENTO / MODIFICA RIFORNIMENTO BENZINA -->
   <div id="tab-insert" class="tab-content">
     <div class="card">
-      <h2>Nuovo Rifornimento Carburante</h2>
+      <h2 id="fuel-form-title">Nuovo Rifornimento Carburante</h2>
+      <input type="hidden" id="editing-fuel-id" value="">
       <div class="form-group">
         <label>Data</label>
         <input type="date" id="date">
@@ -140,14 +142,16 @@
           <input type="text" id="station" placeholder="es. Eni, Q8">
         </div>
       </div>
-      <button class="btn btn-primary" onclick="saveRecord()">Salva Rifornimento</button>
+      <button class="btn btn-primary" id="btn-save-fuel" onclick="saveRecord()">Salva Rifornimento</button>
+      <button class="btn btn-secondary" id="btn-cancel-fuel-edit" onclick="resetFuelForm()" style="display:none; margin-top:6px;">Annulla Modifica</button>
     </div>
   </div>
 
-  <!-- TAB RICARICA ELETTRICA (EV - FORD EXPLORER 2020 PHEV) -->
+  <!-- TAB INSERIMENTO / MODIFICA RICARICA EV -->
   <div id="tab-ev" class="tab-content" style="display:none;">
     <div class="card">
-      <h2>Ricarica EV (Ford Explorer PHEV) ⚡</h2>
+      <h2 id="ev-form-title">Ricarica EV (Ford Explorer PHEV) ⚡</h2>
+      <input type="hidden" id="editing-ev-id" value="">
       <div class="form-group">
         <label>Data</label>
         <input type="date" id="ev-date">
@@ -190,7 +194,8 @@
         </div>
       </div>
 
-      <button class="btn btn-ev" onclick="saveEVRecord()">Salva Ricarica EV</button>
+      <button class="btn btn-ev" id="btn-save-ev" onclick="saveEVRecord()">Salva Ricarica EV</button>
+      <button class="btn btn-secondary" id="btn-cancel-ev-edit" onclick="resetEVForm()" style="display:none; margin-top:6px;">Annulla Modifica</button>
     </div>
   </div>
 
@@ -353,24 +358,32 @@
   </div>
 
   <footer>
-    Fuel Tracker Pro • Version 2.5
+    Fuel Tracker Pro • Version 2.6
   </footer>
 
 <script>
-  let records = [];
-  let evRecords = [];
-  try { records = JSON.parse(localStorage.getItem('fuel_records') || '[]'); } catch(e){ records = []; }
-  try { evRecords = JSON.parse(localStorage.getItem('ev_records') || '[]'); } catch(e){ evRecords = []; }
-
-  let chartP = null, chartE = null, chartM = null;
-
+  // PARAMETRI FISSI FORD EXPLORER 2020 PHEV
   const EXPLORER_USABLE_BATTERY_KWH = 10.3;
   const CHARGING_EFFICIENCY_AC = 0.85;
 
-  document.getElementById('date').valueAsDate = new Date();
-  document.getElementById('ev-date').valueAsDate = new Date();
+  let records = [];
+  let evRecords = [];
+  let chartP = null, chartE = null, chartM = null;
 
-  // NAVIGAZIONE TAB SICURA
+  document.addEventListener('DOMContentLoaded', () => {
+    try { records = JSON.parse(localStorage.getItem('fuel_records') || '[]'); } catch(e){ records = []; }
+    try { evRecords = JSON.parse(localStorage.getItem('ev_records') || '[]'); } catch(e){ evRecords = []; }
+
+    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('ev-date').valueAsDate = new Date();
+
+    checkInitialLock();
+    render();
+    populateDefaultsFromLastRecord();
+    populateEVDefaultsFromLastRecord();
+  });
+
+  // SWITCH TAB SICURO
   function switchTab(tabName) {
     let contents = document.querySelectorAll('.tab-content');
     contents.forEach(el => el.style.display = 'none');
@@ -386,8 +399,8 @@
 
     if (tabName === 'stats') updateCharts();
     if (tabName === 'trip') autoFillTripDefaults();
-    if (tabName === 'insert') populateDefaultsFromLastRecord();
-    if (tabName === 'ev') populateEVDefaultsFromLastRecord();
+    if (tabName === 'insert' && !document.getElementById('editing-fuel-id').value) populateDefaultsFromLastRecord();
+    if (tabName === 'ev' && !document.getElementById('editing-ev-id').value) populateEVDefaultsFromLastRecord();
   }
 
   function getStoredPIN() {
@@ -396,10 +409,9 @@
 
   function checkInitialLock() {
     let pin = getStoredPIN();
-    if (pin) {
-      document.getElementById('pin-screen').style.display = 'flex';
-    } else {
-      document.getElementById('pin-screen').style.display = 'none';
+    let pinScreen = document.getElementById('pin-screen');
+    if (pinScreen) {
+      pinScreen.style.display = pin ? 'flex' : 'none';
     }
     updatePINUI();
   }
@@ -450,11 +462,11 @@
     let statusText = document.getElementById('pin-status-text');
     let btnRemove = document.getElementById('btn-remove-pin');
 
-    if (pin) {
+    if (pin && statusText && btnRemove) {
       statusText.innerText = "ATTIVO 🔒";
       statusText.style.color = "var(--success)";
       btnRemove.style.display = "block";
-    } else {
+    } else if (statusText && btnRemove) {
       statusText.innerText = "Non impostato";
       statusText.style.color = "var(--text-muted)";
       btnRemove.style.display = "none";
@@ -501,16 +513,17 @@
     }
   }
 
+  // CALCOLO AUTOMATICO E BIDIREZIONALE RIFORNIMENTO
   function calculate(changedField) {
     let p = parseFloat(document.getElementById('price').value);
     let l = parseFloat(document.getElementById('liters').value);
     let t = parseFloat(document.getElementById('total').value);
 
     if (changedField === 'total' || changedField === 'price') {
-      if (t && p) document.getElementById('liters').value = (t / p).toFixed(2);
+      if (t && p && p > 0) document.getElementById('liters').value = (t / p).toFixed(2);
     } else if (changedField === 'liters') {
       if (l && p) document.getElementById('total').value = (l * p).toFixed(2);
-      else if (l && t) document.getElementById('price').value = (t / l).toFixed(3);
+      else if (l && t && l > 0) document.getElementById('price').value = (t / l).toFixed(3);
     }
   }
 
@@ -529,7 +542,7 @@
     document.getElementById('ev-total-cost').innerText = totalCost.toFixed(2) + ' €';
   }
 
-  // SALVATAGGIO RIFORNIMENTO
+  // SALVATAGGIO O MODIFICA RIFORNIMENTO BENZINA
   function saveRecord() {
     let date = document.getElementById('date').value;
     let price = parseFloat(document.getElementById('price').value);
@@ -538,234 +551,52 @@
     let kmInput = document.getElementById('km').value;
     let km = kmInput !== '' ? parseFloat(kmInput) : null;
     let station = document.getElementById('station').value.trim() || null;
+    let editId = document.getElementById('editing-fuel-id').value;
 
     if (!date || isNaN(price) || isNaN(liters) || isNaN(total)) {
-      alert("Compila correttamente i campi obbligatori: Data, Prezzo, Litri e Totale!");
+      alert("Compila tutti i campi obbligatori: Data, Prezzo/L, Litri e Costo Totale!");
       return;
     }
 
-    records.push({ date, price, liters, total, km, station, id: Date.now() });
+    if (editId) {
+      // Modifica esistente
+      let idx = records.findIndex(r => r.id == editId);
+      if (idx !== -1) {
+        records[idx] = { date, price, liters, total, km, station, id: Number(editId) };
+      }
+    } else {
+      // Nuovo inserimento
+      records.push({ date, price, liters, total, km, station, id: Date.now() });
+    }
+
     sortRecords();
     localStorage.setItem('fuel_records', JSON.stringify(records));
-
-    document.getElementById('price').value = '';
-    document.getElementById('liters').value = '';
-    document.getElementById('total').value = '';
-    document.getElementById('km').value = '';
-    document.getElementById('station').value = '';
-    
+    resetFuelForm();
     alert("Rifornimento salvato con successo!");
     render();
-    populateDefaultsFromLastRecord();
   }
 
-  // SALVATAGGIO RICARICA EV
-  function saveEVRecord() {
-    let date = document.getElementById('ev-date').value;
-    let startPct = parseFloat(document.getElementById('ev-start-pct').value);
-    let endPct = parseFloat(document.getElementById('ev-end-pct').value);
-    let priceKwh = parseFloat(document.getElementById('ev-kwh-price').value);
-    let kmInput = document.getElementById('ev-km').value;
-    let km = kmInput !== '' ? parseFloat(kmInput) : null;
-    let timeSlot = document.getElementById('ev-time-slot').value.trim() || null;
+  // EDITA RECORD BENZINA (PUNTO C)
+  function editRecord(id) {
+    let r = records.find(item => item.id == id);
+    if (!r) return;
 
-    if (!date || isNaN(startPct) || isNaN(endPct) || isNaN(priceKwh)) {
-      alert("Compila i campi obbligatori: Data, % Partenza, % Finale e Costo €/kWh!");
-      return;
-    }
+    document.getElementById('editing-fuel-id').value = r.id;
+    document.getElementById('date').value = r.date;
+    document.getElementById('price').value = r.price;
+    document.getElementById('liters').value = r.liters;
+    document.getElementById('total').value = r.total;
+    document.getElementById('km').value = r.km || '';
+    document.getElementById('station').value = r.station || '';
 
-    let deltaPct = Math.max(0, endPct - startPct);
-    let kwhNet = (deltaPct / 100) * EXPLORER_USABLE_BATTERY_KWH;
-    let kwhDrawn = kwhNet / CHARGING_EFFICIENCY_AC;
-    let totalCost = kwhDrawn * priceKwh;
+    document.getElementById('fuel-form-title').innerText = "Modifica Rifornimento";
+    document.getElementById('btn-save-fuel').innerText = "Aggiorna Rifornimento";
+    document.getElementById('btn-cancel-fuel-edit').style.display = "block";
 
-    evRecords.push({
-      date, startPct, endPct, priceKwh, kwhNet, kwhDrawn, totalCost, km, timeSlot, id: Date.now()
-    });
-
-    sortEVRecords();
-    localStorage.setItem('ev_records', JSON.stringify(evRecords));
-
-    document.getElementById('ev-start-pct').value = '';
-    document.getElementById('ev-end-pct').value = '';
-    document.getElementById('ev-time-slot').value = '';
-
-    alert("Ricarica EV salvata con successo!");
-    render();
-    populateEVDefaultsFromLastRecord();
+    switchTab('insert');
   }
 
-  function deleteRecord(id) {
-    if (confirm("Eliminare questo rifornimento?")) {
-      records = records.filter(r => r.id !== id);
-      localStorage.setItem('fuel_records', JSON.stringify(records));
-      render();
-      populateDefaultsFromLastRecord();
-    }
-  }
-
-  function deleteEVRecord(id) {
-    if (confirm("Eliminare questa ricarica EV?")) {
-      evRecords = evRecords.filter(r => r.id !== id);
-      localStorage.setItem('ev_records', JSON.stringify(evRecords));
-      render();
-      populateEVDefaultsFromLastRecord();
-    }
-  }
-
-  function render() {
-    sortRecords();
-    sortEVRecords();
-
-    // Render Storico Carburante
-    let list = document.getElementById('history-list');
-    list.innerHTML = '';
-    let totalSpendFuel = 0, totalLiters = 0, totalKmDiff = 0, totalLitersForKm = 0;
-
-    records.slice().reverse().forEach((r, idx) => {
-      totalSpendFuel += Number(r.total);
-      totalLiters += Number(r.liters);
-
-      let originalIdx = records.length - 1 - idx;
-      let effText = '';
-      if (originalIdx > 0 && records[originalIdx].km && records[originalIdx - 1].km) {
-        let dist = Number(records[originalIdx].km) - Number(records[originalIdx - 1].km);
-        if (dist > 0) {
-          let kmL = (dist / Number(records[originalIdx].liters)).toFixed(2);
-          effText = ` | +${dist} km (${kmL} km/L)`;
-          totalKmDiff += dist;
-          totalLitersForKm += Number(records[originalIdx].liters);
-        }
-      }
-
-      let stationBadge = r.station ? `<span class="station-tag">${r.station}</span>` : '';
-
-      list.innerHTML += `
-        <div class="history-item">
-          <div class="history-info">
-            <div class="history-main">${Number(r.total).toFixed(2)} € (${Number(r.liters).toFixed(2)} L) ${stationBadge}</div>
-            <div class="history-sub">${Number(r.price).toFixed(3)} €/L ${r.km ? ' - ' + r.km + ' km' : ''}${effText}</div>
-            <div class="history-date">${r.date}</div>
-          </div>
-          <button class="btn btn-danger" onclick="deleteRecord(${r.id})">X</button>
-        </div>
-      `;
-    });
-
-    // Render Storico EV
-    let evList = document.getElementById('ev-history-list');
-    evList.innerHTML = '';
-    let totalSpendEV = 0, totalKwhDrawn = 0;
-
-    evRecords.slice().reverse().forEach((r) => {
-      totalSpendEV += Number(r.totalCost);
-      totalKwhDrawn += Number(r.kwhDrawn);
-
-      let slotBadge = r.timeSlot ? `<span class="ev-tag">${r.timeSlot}</span>` : '';
-      evList.innerHTML += `
-        <div class="history-item">
-          <div class="history-info">
-            <div class="history-main">${Number(r.totalCost).toFixed(2)} € (${Number(r.kwhDrawn).toFixed(2)} kWh rete) ${slotBadge}</div>
-            <div class="history-sub">${r.startPct}% ➔ ${r.endPct}% | ${Number(r.priceKwh).toFixed(3)} €/kWh ${r.km ? ' - ' + r.km + ' km' : ''}</div>
-            <div class="history-date">${r.date}</div>
-          </div>
-          <button class="btn btn-danger" onclick="deleteEVRecord(${r.id})">X</button>
-        </div>
-      `;
-    });
-
-    // Statistiche Singole Benzina
-    document.getElementById('stat-total-spend').innerText = totalSpendFuel.toFixed(2) + ' €';
-    document.getElementById('stat-total-liters').innerText = totalLiters.toFixed(1) + ' L';
-    document.getElementById('stat-avg-price').innerText = records.length ? (totalSpendFuel / totalLiters).toFixed(3) + ' €/L' : '0 €/L';
-    
-    if (totalLitersForKm > 0) {
-      document.getElementById('stat-avg-consumption').innerText = (totalKmDiff / totalLitersForKm).toFixed(2) + ' km/L';
-    } else {
-      document.getElementById('stat-avg-consumption').innerText = '0 km/L';
-    }
-
-    // STATISTICHE COMBINATE IBRIDO PHEV
-    let combinedSpend = totalSpendFuel + totalSpendEV;
-    document.getElementById('stat-combined-spend').innerText = combinedSpend.toFixed(2) + ' €';
-    document.getElementById('stat-total-kwh').innerText = totalKwhDrawn.toFixed(1) + ' kWh';
-
-    let fuelPct = combinedSpend > 0 ? ((totalSpendFuel / combinedSpend) * 100).toFixed(0) : 0;
-    let evPct = combinedSpend > 0 ? ((totalSpendEV / combinedSpend) * 100).toFixed(0) : 0;
-    document.getElementById('stat-combined-split').innerText = `${fuelPct}% Benzina / ${evPct}% EV`;
-
-    let allKm = [...records.map(r=>r.km), ...evRecords.map(r=>r.km)].filter(k=>k!==null && k!==undefined && !isNaN(k));
-    if (allKm.length >= 2) {
-      let minKm = Math.min(...allKm);
-      let maxKm = Math.max(...allKm);
-      let distTot = maxKm - minKm;
-      if (distTot > 0) {
-        let costPerKm = combinedSpend / distTot;
-        document.getElementById('stat-combined-cost-km').innerText = costPerKm.toFixed(3) + ' €/km';
-      } else {
-        document.getElementById('stat-combined-cost-km').innerText = '0.00 €/km';
-      }
-    } else {
-      document.getElementById('stat-combined-cost-km').innerText = '0.00 €/km';
-    }
-
-    calculateMonthlyAverages();
-  }
-
-  function calculateMonthlyAverages() {
-    if (records.length === 0) {
-      document.getElementById('stat-monthly-spend').innerText = '0 €/m';
-      document.getElementById('stat-monthly-km').innerText = '0 km/m';
-      document.getElementById('stat-monthly-liters').innerText = '0 L/m';
-      document.getElementById('stat-refuel-freq').innerText = '0 gg';
-      return;
-    }
-
-    let now = new Date();
-    let oneYearAgo = new Date();
-    oneYearAgo.setFullYear(now.getFullYear() - 1);
-
-    let recentRecords = records.filter(r => new Date(r.date) >= oneYearAgo);
-    if (recentRecords.length === 0) recentRecords = records;
-
-    let totalSpend = recentRecords.reduce((acc, r) => acc + Number(r.total), 0);
-    let totalLiters = recentRecords.reduce((acc, r) => acc + Number(r.liters), 0);
-
-    let startDate = new Date(recentRecords[0].date);
-    let endDate = new Date(recentRecords[recentRecords.length - 1].date);
-    let diffDays = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
-    let diffMonths = Math.max(1, (diffDays / 30.44));
-
-    let monthlySpend = totalSpend / diffMonths;
-    let monthlyLiters = totalLiters / diffMonths;
-
-    let kmRecords = recentRecords.filter(r => r.km !== null && r.km !== undefined && !isNaN(r.km));
-    let monthlyKm = 0;
-    if (kmRecords.length >= 2) {
-      let totalKm = Number(kmRecords[kmRecords.length - 1].km) - Number(kmRecords[0].km);
-      monthlyKm = totalKm / diffMonths;
-    }
-
-    let freqDays = recentRecords.length > 1 ? (diffDays / (recentRecords.length - 1)) : 0;
-
-    document.getElementById('stat-monthly-spend').innerText = monthlySpend.toFixed(0) + ' €/m';
-    document.getElementById('stat-monthly-km').innerText = monthlyKm > 0 ? monthlyKm.toFixed(0) + ' km/m' : 'N/D';
-    document.getElementById('stat-monthly-liters').innerText = monthlyLiters.toFixed(1) + ' L/m';
-    document.getElementById('stat-refuel-freq').innerText = freqDays > 0 ? freqDays.toFixed(1) + ' gg' : 'N/D';
-  }
-
-  function updateCharts() {
-    let labels = records.map(r => r.date);
-    let prices = records.map(r => Number(r.price));
-    
-    let efficiencies = records.map((r, i) => {
-      if (i > 0 && r.km && records[i-1].km) {
-        let dist = Number(r.km) - Number(records[i-1].km);
-        return dist > 0 ? (dist / Number(r.liters)) : null;
-      }
-      return null;
-    });
-
-    let monthsSet = new Set();
-    let fuelMonthly = {};
-    let evMonthly
+  function resetFuelForm() {
+    document.getElementById('editing-fuel-id').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('liters').value = '';
