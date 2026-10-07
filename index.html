@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fuel Tracker Pro v2.8 (Debug Edition)</title>
+  <title>Fuel Tracker Pro v2.1</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Chart.js per i grafici -->
@@ -14,34 +14,19 @@
       --card: #1e293b;
       --accent: #38bdf8;
       --accent-hover: #0284c7;
-      --ev-accent: #10b981;
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --border: #334155;
       --danger: #ef4444;
       --success: #10b981;
       --warning: #f59e0b;
-      --purple: #a855f7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 220px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 50px; max-width: 600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
     
-    /* MODALE PIN LOCK */
-    #pin-screen {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: var(--bg); z-index: 9999; display: none; flex-direction: column;
-      justify-content: center; align-items: center; padding: 20px;
-    }
-    .pin-box { background: var(--card); padding: 24px; border-radius: 20px; border: 1px solid var(--border); text-align: center; width: 100%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .pin-box h2 { border: none; margin-bottom: 8px; }
-    .pin-box p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
-    .pin-input { font-size: 1.8rem; letter-spacing: 12px; text-align: center; width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: #0f172a; color: #fff; margin-bottom: 16px; outline: none; }
-    .pin-input:focus { border-color: var(--accent); }
-
     header { text-align: center; padding: 12px 0 16px; position: relative; }
     h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: inline-block; }
     .version-badge { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
-    .btn-lock { position: absolute; right: 0; top: 12px; background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; }
     
     .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); }
     h2 { font-size: 1.1rem; margin-bottom: 14px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
@@ -52,11 +37,8 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 8px; text-align: center; display: inline-block; text-decoration: none; }
     .btn-primary { background: var(--accent); color: #0f172a; }
-    .btn-primary:active { background: var(--accent-hover); }
-    .btn-ev { background: var(--ev-accent); color: #0f172a; }
     .btn-secondary { background: #334155; color: #fff; }
     .btn-success { background: var(--success); color: #0f172a; }
-    .btn-edit { background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid var(--accent); font-size: 0.8rem; padding: 6px 10px; width: auto; margin-right: 4px; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; padding: 6px 10px; width: auto; }
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
     .stat-card { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
@@ -68,82 +50,35 @@
     .history-main { font-weight: 600; }
     .history-sub { font-size: 0.8rem; color: var(--accent); }
     .station-tag { display: inline-block; background: #334155; color: #f8fafc; font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
-    .ev-tag { display: inline-block; background: rgba(16, 185, 129, 0.2); color: var(--ev-accent); border: 1px solid var(--ev-accent); font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
     canvas { width: 100% !important; max-height: 220px; }
     
     .tabs { display: flex; gap: 4px; margin-bottom: 16px; overflow-x: auto; }
-    .tab-btn { flex: 1; padding: 10px 4px; text-align: center; background: var(--card); border-radius: 10px; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .tab-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
-    .tab-btn.tab-ev.active { background: var(--ev-accent); color: #0f172a; border-color: var(--ev-accent); }
+    .tab { flex: 1; padding: 10px 4px; text-align: center; background: var(--card); border-radius: 10px; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
     
     .file-input-wrapper { position: relative; margin-top: 10px; }
     .file-input-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-    .pin-status-box { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.85rem; margin-bottom: 12px; }
-
-    /* DEBUG BANNER FISSO IN BASSO */
-    #debug-banner {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      max-height: 160px;
-      background: #180808;
-      border-top: 2px solid var(--danger);
-      color: #f87171;
-      padding: 10px 12px;
-      font-family: monospace;
-      font-size: 0.75rem;
-      z-index: 10000;
-      overflow-y: auto;
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.8);
-    }
-    .debug-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-      border-bottom: 1px solid #450a0a;
-      padding-bottom: 4px;
-    }
-    .debug-title { font-weight: bold; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; }
-    .debug-actions button { background: #450a0a; color: #fca5a5; border: 1px solid var(--danger); border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; cursor: pointer; margin-left: 4px; }
-    .debug-log-entry { margin-bottom: 4px; word-break: break-all; border-bottom: 1px dashed rgba(239, 68, 68, 0.2); padding-bottom: 2px; }
-    .debug-info { color: #38bdf8; }
-    .debug-error { color: #f87171; font-weight: bold; }
+    footer { margin-top: auto; text-align: center; font-size: 0.75rem; color: var(--text-muted); padding-top: 20px; }
   </style>
 </head>
 <body>
 
-  <!-- SCHERMATA BLOCCO PIN -->
-  <div id="pin-screen">
-    <div class="pin-box">
-      <h2>Fuel Tracker Pro</h2>
-      <p>Inserisci il tuo PIN di 6 cifre</p>
-      <input type="password" id="pin-input" class="pin-input" maxlength="6" pattern="\d*" inputmode="numeric">
-      <button class="btn btn-primary" id="btn-unlock-pin">Sblocca</button>
-    </div>
-  </div>
-
   <header>
     <h1>Fuel Tracker Pro</h1>
-    <span class="version-badge">v2.8 Debug</span>
-    <button class="btn-lock" id="btn-lock-app" title="Blocca App">🔒</button>
+    <span class="version-badge">v2.1</span>
   </header>
 
-  <!-- NAVIGAZIONE TAB -->
   <div class="tabs">
-    <button class="tab-btn active" id="btn-tab-insert">Rifornimento</button>
-    <button class="tab-btn tab-ev" id="btn-tab-ev">Ricarica EV ⚡</button>
-    <button class="tab-btn" id="btn-tab-trip">Viaggio</button>
-    <button class="tab-btn" id="btn-tab-stats">Grafici & Medie</button>
-    <button class="tab-btn" id="btn-tab-history">Storico & Dati</button>
+    <div class="tab active" onclick="switchTab('insert')">Rifornimento</div>
+    <div class="tab" onclick="switchTab('trip')">Viaggio</div>
+    <div class="tab" onclick="switchTab('stats')">Grafici & Medie</div>
+    <div class="tab" onclick="switchTab('history')">Storico & Dati</div>
   </div>
 
-  <!-- TAB INSERIMENTO / MODIFICA RIFORNIMENTO BENZINA -->
+  <!-- TAB INSERIMENTO RIFORNIMENTO -->
   <div id="tab-insert" class="tab-content">
     <div class="card">
-      <h2 id="fuel-form-title">Nuovo Rifornimento Carburante</h2>
-      <input type="hidden" id="editing-fuel-id" value="">
+      <h2>Nuovo Rifornimento Carburante</h2>
       <div class="form-group">
         <label>Data</label>
         <input type="date" id="date">
@@ -151,16 +86,16 @@
       <div class="grid-2">
         <div class="form-group">
           <label>Prezzo/L (€)</label>
-          <input type="number" id="price" step="0.001" placeholder="1.850">
+          <input type="number" id="price" step="0.001" placeholder="1.850" oninput="calculate('price')">
         </div>
         <div class="form-group">
           <label>Litri (L)</label>
-          <input type="number" id="liters" step="0.01" placeholder="40.00">
+          <input type="number" id="liters" step="0.01" placeholder="40.00" oninput="calculate('liters')">
         </div>
       </div>
       <div class="form-group">
         <label>Costo Totale (€)</label>
-        <input type="number" id="total" step="0.01" placeholder="74.00">
+        <input type="number" id="total" step="0.01" placeholder="74.00" oninput="calculate('total')">
       </div>
       <div class="grid-2">
         <div class="form-group">
@@ -172,60 +107,7 @@
           <input type="text" id="station" placeholder="es. Eni, Q8">
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-save-fuel">Salva Rifornimento</button>
-      <button class="btn btn-secondary" id="btn-cancel-fuel-edit" style="display:none; margin-top:6px;">Annulla Modifica</button>
-    </div>
-  </div>
-
-  <!-- TAB INSERIMENTO / MODIFICA RICARICA EV -->
-  <div id="tab-ev" class="tab-content" style="display:none;">
-    <div class="card">
-      <h2 id="ev-form-title">Ricarica EV (Ford Explorer PHEV) ⚡</h2>
-      <input type="hidden" id="editing-ev-id" value="">
-      <div class="form-group">
-        <label>Data</label>
-        <input type="date" id="ev-date">
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label>% Batteria Partenza</label>
-          <input type="number" id="ev-start-pct" min="0" max="100" placeholder="es. 20">
-        </div>
-        <div class="form-group">
-          <label>% Batteria Finale</label>
-          <input type="number" id="ev-end-pct" min="0" max="100" placeholder="es. 100">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label>Costo €/kWh</label>
-          <input type="number" id="ev-kwh-price" step="0.001" placeholder="es. 0.250">
-        </div>
-        <div class="form-group">
-          <label>Km Totali</label>
-          <input type="number" id="ev-km" step="1" placeholder="es. 125000">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Fascia Oraria (opzionale)</label>
-        <input type="text" id="ev-time-slot" placeholder="es. F3, Notturna, 23:00-07:00">
-      </div>
-
-      <div style="background:#0f172a; padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px; font-size:0.8rem;">
-        <div style="margin-bottom:4px; color:var(--text-muted);">
-          Parametri: <strong>10,3 kWh usabili</strong> (13,6 nominali) • <strong>15% perdite AC</strong>
-        </div>
-        <div style="display:flex; justify-content:space-between; color:var(--text-muted); margin-top:6px;">
-          <span>Prelevati (Rete): <strong id="ev-kwh-drawn" style="color:#fff;">0.00 kWh</strong></span>
-          <span>In Batteria: <strong id="ev-kwh-net" style="color:#fff;">0.00 kWh</strong></span>
-        </div>
-        <div style="margin-top:6px; font-size:0.9rem;">
-          Costo Ricarica: <strong id="ev-total-cost" style="color:var(--ev-accent); font-size:1.1rem;">0.00 €</strong>
-        </div>
-      </div>
-
-      <button class="btn btn-ev" id="btn-save-ev">Salva Ricarica EV</button>
-      <button class="btn btn-secondary" id="btn-cancel-ev-edit" style="display:none; margin-top:6px;">Annulla Modifica</button>
+      <button class="btn btn-primary" onclick="saveRecord()">Salva Rifornimento</button>
     </div>
   </div>
 
@@ -235,21 +117,21 @@
       <h2>Calcolatore Costo Viaggio</h2>
       <div class="form-group">
         <label>Distanza da Percorrere (km)</label>
-        <input type="number" id="trip-distance" placeholder="es. 450">
+        <input type="number" id="trip-distance" placeholder="es. 450" oninput="calculateTripCost()">
       </div>
       <div class="grid-2">
         <div class="form-group">
           <label>Prezzo Carburante (€/L)</label>
-          <input type="number" id="trip-price" step="0.001" placeholder="1.850">
+          <input type="number" id="trip-price" step="0.001" placeholder="1.850" oninput="calculateTripCost()">
         </div>
         <div class="form-group">
           <label>Consumo Medio (km/L)</label>
-          <input type="number" id="trip-efficiency" step="0.1" placeholder="16.5">
+          <input type="number" id="trip-efficiency" step="0.1" placeholder="16.5" oninput="calculateTripCost()">
         </div>
       </div>
       <div class="form-group">
         <label>Numero Passeggeri (per dividere la spesa)</label>
-        <input type="number" id="trip-passengers" value="1" min="1">
+        <input type="number" id="trip-passengers" value="1" min="1" oninput="calculateTripCost()">
       </div>
     </div>
 
@@ -271,26 +153,155 @@
 
   <!-- TAB GRAFICI & MEDIE -->
   <div id="tab-stats" class="tab-content" style="display:none;">
-    <div class="card" style="border-color: var(--purple);">
-      <h2 style="color: var(--purple);">Totale Ibrido PHEV (Benzina + EV)</h2>
-      <div class="stats-grid">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Spesa Totale</div>
+        <div class="stat-value" id="stat-total-spend">0 €</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Litri Totali</div>
+        <div class="stat-value" id="stat-total-liters">0 L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Consumo Medio</div>
+        <div class="stat-value" id="stat-avg-consumption">0 km/L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Prezzo Medio</div>
+        <div class="stat-value" id="stat-avg-price">0 €/L</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Medie Mensili (Ultimi 12 Mesi)</h2>
+      <div class="stats-grid" style="margin-bottom:0;">
         <div class="stat-card">
-          <div class="stat-label">Spesa Combinata</div>
-          <div class="stat-value" id="stat-combined-spend" style="color: var(--purple);">0 €</div>
+          <div class="stat-label">Spesa Mensile</div>
+          <div class="stat-value" id="stat-monthly-spend" style="color: var(--warning);">0 €/m</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Costo Medio / km</div>
-          <div class="stat-value" id="stat-combined-cost-km">0.00 €/km</div>
+          <div class="stat-label">Percorrenza</div>
+          <div class="stat-value" id="stat-monthly-km" style="color: var(--accent);">0 km/m</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Ripartizione Spesa</div>
-          <div class="stat-value" id="stat-combined-split" style="font-size: 0.95rem;">0% B / 0% E</div>
+          <div class="stat-label">Litri Mensili</div>
+          <div class="stat-value" id="stat-monthly-liters">0 L/m</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Energia Rete Totale</div>
-          <div class="stat-value" id="stat-total-kwh" style="color: var(--ev-accent);">0 kWh</div>
+          <div class="stat-label">Frequenza</div>
+          <div class="stat-value" id="stat-refuel-freq" style="color: var(--success);">0 gg</div>
         </div>
       </div>
     </div>
 
-    <div class="stats
+    <div class="card">
+      <h2>Andamento Prezzo/L</h2>
+      <canvas id="chartPrice"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Efficienza (km/L)</h2>
+      <canvas id="chartEfficiency"></canvas>
+    </div>
+  </div>
+
+  <!-- TAB STORICO & GESTIONE DATI -->
+  <div id="tab-history" class="tab-content" style="display:none;">
+    <div class="card">
+      <h2>Importa / Esporta (.csv)</h2>
+      <button class="btn btn-secondary" onclick="exportCSV()">Esporta CSV</button>
+      <div class="file-input-wrapper">
+        <button class="btn btn-success">Importa CSV</button>
+        <input type="file" id="csv-file" accept=".csv, .txt" onchange="importCSV(event)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Storico Rifornimenti</h2>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    Fuel Tracker Pro • Version 2.1
+  </footer>
+
+<script>
+  let records = JSON.parse(localStorage.getItem('fuel_records') || '[]');
+  let chartP, chartE;
+
+  document.getElementById('date').valueAsDate = new Date();
+
+  function sortRecords() {
+    records.sort((a, b) => {
+      let dateDiff = new Date(a.date) - new Date(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      let kmA = a.km || -1;
+      let kmB = b.km || -1;
+      if (kmA !== kmB) return kmA - kmB;
+      return (a.id || 0) - (b.id || 0);
+    });
+  }
+
+  function populateDefaultsFromLastRecord() {
+    if (records.length > 0) {
+      sortRecords();
+      let lastRecord = records[records.length - 1];
+      if (lastRecord.price) document.getElementById('price').value = lastRecord.price.toFixed(3);
+      if (lastRecord.km) document.getElementById('km').value = lastRecord.km;
+    }
+  }
+
+  function calculate(changedField) {
+    let p = parseFloat(document.getElementById('price').value);
+    let l = parseFloat(document.getElementById('liters').value);
+    let t = parseFloat(document.getElementById('total').value);
+
+    if (changedField === 'total' || changedField === 'price') {
+      if (t && p) document.getElementById('liters').value = (t / p).toFixed(2);
+    } else if (changedField === 'liters') {
+      if (l && p) document.getElementById('total').value = (l * p).toFixed(2);
+      else if (l && t) document.getElementById('price').value = (t / l).toFixed(3);
+    }
+  }
+
+  function saveRecord() {
+    let date = document.getElementById('date').value;
+    let price = parseFloat(document.getElementById('price').value);
+    let liters = parseFloat(document.getElementById('liters').value);
+    let total = parseFloat(document.getElementById('total').value);
+    let km = parseFloat(document.getElementById('km').value) || null;
+    let station = document.getElementById('station').value.trim() || null;
+
+    if (!date || !price || !liters || !total) {
+      alert("Compila tutti i campi obbligatori!");
+      return;
+    }
+
+    records.push({ date, price, liters, total, km, station, id: Date.now() });
+    sortRecords();
+    localStorage.setItem('fuel_records', JSON.stringify(records));
+
+    document.getElementById('price').value = '';
+    document.getElementById('liters').value = '';
+    document.getElementById('total').value = '';
+    document.getElementById('km').value = '';
+    document.getElementById('station').value = '';
+    
+    alert("Rifornimento salvato!");
+    render();
+    populateDefaultsFromLastRecord();
+  }
+
+  function deleteRecord(id) {
+    if (confirm("Eliminare questo rifornimento?")) {
+      records = records.filter(r => r.id !== id);
+      localStorage.setItem('fuel_records', JSON.stringify(records));
+      render();
+      populateDefaultsFromLastRecord();
+    }
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
